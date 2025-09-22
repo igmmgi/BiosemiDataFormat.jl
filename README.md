@@ -17,7 +17,8 @@ Julia code for BioSemi 24 bit EEG files. The code can be used for:
 
 ```julia
 ] # julia pkg manager
-add https://github.com/igmmgi/BiosemiDataFormat.git # install from  GitHub
+add BiosemiDataFormat
+add https://github.com/igmmgi/BiosemiDataFormat.jl.git # install from  GitHub
 test BiosemiDataFormat # optional
 ```
 
