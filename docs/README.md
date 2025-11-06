@@ -7,9 +7,6 @@ This directory contains the documentation for the BiosemiDataFormat package.
 To build the documentation locally:
 
 ```bash
-# Install dependencies
-julia --project=docs/ -e 'using Pkg; Pkg.instantiate()'
-
 # Build documentation
 julia --project=docs/ docs/make.jl
 ```

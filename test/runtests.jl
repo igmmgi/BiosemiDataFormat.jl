@@ -347,4 +347,143 @@ const cases = [
     @test_throws ErrorException BiosemiDataFormat.channel_index(["A1"], [1, 2])
   end
 
+  @testset "recode_triggers" begin
+    for (fname, sr, nrecs, trig, sz) in cases
+      @testset "recode_triggers $(sr)Hz" begin
+        bdf = testfile(fname)
+        dat = read_bdf(bdf)
+        
+        # Get original trigger information
+        original_triggers = copy(dat.triggers.raw)
+        original_count = copy(dat.triggers.count)
+        original_trigger_values = sort(collect(keys(original_count)))
+        
+        # Test 1: Recode triggers (non-mutating)
+        if length(original_trigger_values) >= 1
+          test_val = original_trigger_values[1]
+          new_val = 999
+          dat_recoded = recode_triggers(dat, recode_triggers=Dict(test_val => new_val))
+          
+          # Original should be unchanged
+          @test dat.triggers.raw == original_triggers
+          @test dat.triggers.count == original_count
+          
+          # New should have recoded values
+          # Note: trigger values persist across samples, so we check count of events, not samples
+          @test new_val in keys(dat_recoded.triggers.count)
+          @test dat_recoded.triggers.count[new_val] == original_count[test_val]
+          @test test_val ∉ keys(dat_recoded.triggers.count)
+          # Verify all samples with old value are now new value
+          @test count(x -> x == test_val, dat_recoded.triggers.raw) == 0
+        end
+        
+        # Test 2: Remove triggers (non-mutating)
+        if length(original_trigger_values) >= 1
+          remove_val = original_trigger_values[1]
+          dat_removed = recode_triggers(dat, remove_triggers=[remove_val])
+          
+          # Original should be unchanged
+          @test dat.triggers.raw == original_triggers
+          
+          # Removed triggers should be set to 0
+          @test count(x -> x == remove_val, dat_removed.triggers.raw) == 0
+          @test remove_val ∉ keys(dat_removed.triggers.count)
+        end
+        
+        # Test 3: Add triggers (non-mutating)
+        add_val = 888
+        add_idx = min(1000, size(dat.data, 1))  # Use valid index
+        dat_added = recode_triggers(dat, add_triggers=Dict(add_val => add_idx))
+        
+        # Original should be unchanged
+        @test dat.triggers.raw == original_triggers
+        
+        # New trigger should be present at specified index
+        @test dat_added.triggers.raw[add_idx] == add_val
+        @test add_val in keys(dat_added.triggers.count)
+        
+        # Test 4: Combined operations (non-mutating)
+        if length(original_trigger_values) >= 2
+          recode_val1 = original_trigger_values[1]
+          recode_val2 = original_trigger_values[2]
+          new_val1 = 777
+          new_val2 = 666
+          remove_val = original_trigger_values[1]
+          add_val = 555
+          add_idx = min(2000, size(dat.data, 1))
+          
+          dat_combined = recode_triggers(dat,
+            recode_triggers=Dict(recode_val1 => new_val1, recode_val2 => new_val2),
+            remove_triggers=[remove_val],
+            add_triggers=Dict(add_val => add_idx))
+          
+          # Original should be unchanged
+          @test dat.triggers.raw == original_triggers
+          
+          # Check recoded values
+          @test new_val1 in keys(dat_combined.triggers.count)
+          @test new_val2 in keys(dat_combined.triggers.count)
+          
+          # Check removed value
+          @test count(x -> x == remove_val, dat_combined.triggers.raw) == 0
+          
+          # Check added value
+          @test dat_combined.triggers.raw[add_idx] == add_val
+        end
+        
+        # Test 5: Mutating version (!)
+        dat_mut = read_bdf(bdf)
+        original_raw_mut = copy(dat_mut.triggers.raw)
+        
+        if length(original_trigger_values) >= 1
+          test_val = original_trigger_values[1]
+          new_val = 444
+          recode_triggers!(dat_mut, recode_triggers=Dict(test_val => new_val))
+          
+          # Should be modified in place
+          @test dat_mut.triggers.raw != original_raw_mut
+          @test new_val in keys(dat_mut.triggers.count)
+          @test count(x -> x == test_val, dat_mut.triggers.raw) == 0
+        end
+        
+        # Test 6: Trigger information is recalculated correctly
+        dat_test = read_bdf(bdf)
+        if length(original_trigger_values) >= 1
+          test_val = original_trigger_values[1]
+          new_val = 333
+          recode_triggers!(dat_test, recode_triggers=Dict(test_val => new_val))
+          
+          # Trigger info should be consistent
+          @test length(dat_test.triggers.raw) == size(dat_test.data, 1)
+          @test length(dat_test.triggers.idx) == length(dat_test.triggers.val)
+          # time is a matrix with 2 columns, so check number of rows
+          @test size(dat_test.triggers.time, 1) == length(dat_test.triggers.idx)
+          @test size(dat_test.triggers.time, 2) == 2
+          
+          # Count should match number of trigger events (not samples)
+          @test dat_test.triggers.count[new_val] == length(findall(x -> x == new_val, dat_test.triggers.val))
+        end
+        
+        # Test 7: Out of range index handling (should warn but not error)
+        dat_safe = read_bdf(bdf)
+        invalid_idx = size(dat_safe.data, 1) + 1000
+        valid_idx = min(500, size(dat_safe.data, 1))
+        
+        # Should handle out of range gracefully
+        recode_triggers!(dat_safe, add_triggers=Dict(222 => invalid_idx, 111 => valid_idx))
+        
+        # Valid trigger should be added
+        @test dat_safe.triggers.raw[valid_idx] == 111
+        
+        # Test 8: Empty operations should not change data
+        dat_empty = read_bdf(bdf)
+        original_empty = copy(dat_empty.triggers.raw)
+        recode_triggers!(dat_empty, remove_triggers=Int[], recode_triggers=Dict{Int,Int}(), add_triggers=Dict{Int,Int}())
+        
+        # Should be unchanged
+        @test dat_empty.triggers.raw == original_empty
+      end
+    end
+  end
+
 end

@@ -280,6 +280,126 @@ end
 
 
 """
+    recode_triggers!(bdf; remove_triggers=[], recode_triggers=Dict{Int,Int}(), add_triggers=Dict{Int,Int}())
+
+Recode, remove, and/or add trigger values in BDF data (in-place).
+
+# Arguments
+- `bdf::BiosemiData`: Data structure to modify
+- `remove_triggers::Vector{Int}`: Trigger values to remove (set to 0)
+- `recode_triggers::Dict{Int,Int}`: Dictionary mapping old trigger values to new values
+- `add_triggers::Dict{Int,Int}`: Dictionary mapping trigger values to sample indices where they should be added
+
+# Returns
+- `Nothing`: Modifies `bdf` in-place
+
+# Examples
+```julia
+# Recode trigger 1 to 2 and trigger 2 to 1
+recode_triggers!(dat, recode_triggers=Dict(1 => 2, 2 => 1))
+
+# Remove triggers 3 and 4
+recode_triggers!(dat, remove_triggers=[3, 4])
+
+# Add trigger 10 at sample index 1000
+recode_triggers!(dat, add_triggers=Dict(10 => 1000))
+
+# All operations: recode, remove, and add
+recode_triggers!(dat, remove_triggers=[5], recode_triggers=Dict(1 => 10, 2 => 20), add_triggers=Dict(100 => 5000))
+```
+
+# Notes
+- Modifies the original data structure
+- Operations are applied in order: recode, remove, then add
+- Removed triggers are set to 0 in the raw trigger channel
+- Added triggers are set at the specified sample indices
+- Sample indices must be within the valid range [1, length(data)]
+- Trigger information (idx, val, count, time) is recalculated after all modifications
+- Use `recode_triggers` for non-mutating version
+
+# See also
+- `recode_triggers`: Non-mutating version
+- `crop_bdf!`: Crop data between triggers
+"""
+function recode_triggers!(bdf::BiosemiData; remove_triggers::Vector{Int}=Int[], recode_triggers::Dict{Int,Int}=Dict{Int,Int}(), add_triggers::Dict{Int,Int}=Dict{Int,Int}())
+  
+  @info "Recoding triggers: remove=$remove_triggers, recode=$recode_triggers, add=$add_triggers"
+  
+  # Start with a copy of the raw trigger data
+  trig_raw = copy(bdf.triggers.raw)
+  data_length = length(trig_raw)
+  
+  # Apply recoding first
+  for (old_val, new_val) in recode_triggers
+    trig_raw[trig_raw .== old_val] .= new_val
+  end
+  
+  # Then remove specified triggers (set to 0)
+  for val in remove_triggers
+    trig_raw[trig_raw .== val] .= 0
+  end
+  
+  # Finally, add new triggers at specified sample indices
+  for (trigger_val, sample_idx) in add_triggers
+    if 1 <= sample_idx <= data_length
+      trig_raw[sample_idx] = trigger_val
+    else
+      @warn "Sample index $sample_idx out of range [1, $data_length], skipping trigger $trigger_val"
+    end
+  end
+  
+  # Recalculate trigger information
+  bdf.triggers = trigger_info(trig_raw, bdf.header.sample_rate[1])
+  
+end
+
+
+"""
+    recode_triggers(bdf_in; remove_triggers=[], recode_triggers=Dict{Int,Int}(), add_triggers=Dict{Int,Int}())
+
+Recode, remove, and/or add trigger values in BDF data (non-mutating).
+
+# Arguments
+- `bdf_in::BiosemiData`: Input data structure
+- `remove_triggers::Vector{Int}`: Trigger values to remove (set to 0)
+- `recode_triggers::Dict{Int,Int}`: Dictionary mapping old trigger values to new values
+- `add_triggers::Dict{Int,Int}`: Dictionary mapping trigger values to sample indices where they should be added
+
+# Returns
+- `BiosemiData`: New data structure with recoded triggers
+
+# Examples
+```julia
+# Recode trigger 1 to 2 and trigger 2 to 1
+dat_recoded = recode_triggers(dat, recode_triggers=Dict(1 => 2, 2 => 1))
+
+# Remove triggers 3 and 4
+dat_cleaned = recode_triggers(dat, remove_triggers=[3, 4])
+
+# Add trigger 10 at sample index 1000
+dat_with_new = recode_triggers(dat, add_triggers=Dict(10 => 1000))
+
+# All operations: recode, remove, and add
+dat_modified = recode_triggers(dat, remove_triggers=[5], recode_triggers=Dict(1 => 10, 2 => 20), add_triggers=Dict(100 => 5000))
+```
+
+# Notes
+- Returns a new data structure (original unchanged)
+- Calls `recode_triggers!` internally
+- Useful when you want to preserve the original data
+
+# See also
+- `recode_triggers!`: In-place version
+- `crop_bdf`: Crop data between triggers
+"""
+function recode_triggers(bdf_in::BiosemiData; remove_triggers::Vector{Int}=Int[], recode_triggers::Dict{Int,Int}=Dict{Int,Int}(), add_triggers::Dict{Int,Int}=Dict{Int,Int}())
+  bdf_out = deepcopy(bdf_in)
+  recode_triggers!(bdf_out, remove_triggers=remove_triggers, recode_triggers=recode_triggers, add_triggers=add_triggers)
+  return bdf_out
+end
+
+
+"""
     time_range(sample_rate, num_data_records)
 
 Generate time vector for BDF data.

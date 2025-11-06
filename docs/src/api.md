@@ -52,6 +52,13 @@ BiosemiDataFormat.downsample_bdf!
 BiosemiDataFormat.merge_bdf
 ```
 
+### Trigger Manipulation
+
+```@docs
+BiosemiDataFormat.recode_triggers
+BiosemiDataFormat.recode_triggers!
+```
+
 ## Channel Management Functions
 
 ### Channel Selection

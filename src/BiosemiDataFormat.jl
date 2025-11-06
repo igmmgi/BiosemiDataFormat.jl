@@ -58,6 +58,8 @@ export
   downsample_bdf,
   merge_bdf,
   read_bdf,
+  recode_triggers!,
+  recode_triggers,
   select_channels_bdf!,
   select_channels_bdf,
   write_bdf
