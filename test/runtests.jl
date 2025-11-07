@@ -482,6 +482,63 @@ const cases = [
         
         # Should be unchanged
         @test dat_empty.triggers.raw == original_empty
+        
+        # Test 9: Overlapping mappings (value is both source and target)
+        # This tests the fix for the bug where overlapping mappings caused incorrect recoding
+        dat_overlap = read_bdf(bdf)
+        original_overlap = copy(dat_overlap.triggers.raw)
+        original_count_overlap = copy(dat_overlap.triggers.count)
+        
+        # Test overlapping mappings: 3->4, 4->2, 5->3
+        # Original 3's should become 4's (not 2's!)
+        # Original 4's should become 2's
+        # Original 5's should become 3's
+        if 3 in keys(original_count_overlap) && 4 in keys(original_count_overlap) && 5 in keys(original_count_overlap)
+          count_3_orig = original_count_overlap[3]
+          count_4_orig = original_count_overlap[4]
+          count_5_orig = original_count_overlap[5]
+          
+          recode_triggers!(dat_overlap, recode_triggers=Dict(3 => 4, 4 => 2, 5 => 3))
+          
+          # Original 3's should become 4's
+          @test dat_overlap.triggers.count[4] >= count_3_orig  # At least the original 3's
+          # Original 4's should become 2's
+          @test 2 in keys(dat_overlap.triggers.count)
+          @test dat_overlap.triggers.count[2] >= count_4_orig  # At least the original 4's
+          # Original 5's should become 3's
+          @test dat_overlap.triggers.count[3] >= count_5_orig  # At least the original 5's
+          
+          # Verify no double-recoding: original 3's should NOT become 2's
+          # Count how many 2's came from original 3's (should be 0)
+          # We can verify this by checking that 2's only come from original 4's
+          # Since we can't easily track this, we verify the counts are correct
+          # Original 3's became 4's, so total 4's should be >= original 3's
+          # Original 4's became 2's, so total 2's should be >= original 4's
+          # Original 5's became 3's, so total 3's should be >= original 5's
+        end
+        
+        # Test 10: Verify original is unchanged after non-mutating version
+        dat_orig_test = read_bdf(bdf)
+        original_test = copy(dat_orig_test.triggers.raw)
+        original_count_test = copy(dat_orig_test.triggers.count)
+        
+        if length(keys(original_count_test)) >= 2
+          test_vals = sort(collect(keys(original_count_test)))
+          val1 = test_vals[1]
+          val2 = test_vals[2]
+          
+          # Test overlapping: val1 -> val2, val2 -> 999
+          dat_result = recode_triggers(dat_orig_test, recode_triggers=Dict(val1 => val2, val2 => 999))
+          
+          # Original should be completely unchanged
+          @test dat_orig_test.triggers.raw == original_test
+          @test dat_orig_test.triggers.count == original_count_test
+          
+          # Result should have val1's recoded to val2, val2's recoded to 999
+          # Original val1's should become val2's (not 999's!)
+          @test val2 in keys(dat_result.triggers.count)
+          @test 999 in keys(dat_result.triggers.count)
+        end
       end
     end
   end

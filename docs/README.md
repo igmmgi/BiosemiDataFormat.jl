@@ -8,7 +8,7 @@ To build the documentation locally:
 
 ```bash
 # Build documentation
-julia --project=docs/ docs/make.jl
+julia --project=. docs/make.jl
 ```
 
 The built documentation will be available in `docs/build/`.

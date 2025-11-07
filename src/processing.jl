@@ -325,31 +325,32 @@ function recode_triggers!(bdf::BiosemiData; remove_triggers::Vector{Int}=Int[], 
   
   @info "Recoding triggers: remove=$remove_triggers, recode=$recode_triggers, add=$add_triggers"
   
-  # Start with a copy of the raw trigger data
-  trig_raw = copy(bdf.triggers.raw)
-  data_length = length(trig_raw)
+  # Keep original unchanged, work from original to new
+  trig_original = bdf.triggers.raw
+  trig_new = copy(trig_original)
+  data_length = length(trig_new)
   
-  # Apply recoding first
+  # Apply recoding - always read from original, write to new
   for (old_val, new_val) in recode_triggers
-    trig_raw[trig_raw .== old_val] .= new_val
+    trig_new[trig_original .== old_val] .= new_val
   end
   
-  # Then remove specified triggers (set to 0)
+  # Remove specified triggers (set to 0) - read from original to avoid conflicts
   for val in remove_triggers
-    trig_raw[trig_raw .== val] .= 0
+    trig_new[trig_original .== val] .= 0
   end
   
-  # Finally, add new triggers at specified sample indices
+  # Add new triggers at specified sample indices
   for (trigger_val, sample_idx) in add_triggers
     if 1 <= sample_idx <= data_length
-      trig_raw[sample_idx] = trigger_val
+      trig_new[sample_idx] = trigger_val
     else
       @warn "Sample index $sample_idx out of range [1, $data_length], skipping trigger $trigger_val"
     end
   end
   
   # Recalculate trigger information
-  bdf.triggers = trigger_info(trig_raw, bdf.header.sample_rate[1])
+  bdf.triggers = trigger_info(trig_new, bdf.header.sample_rate[1])
   
 end
 
