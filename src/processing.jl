@@ -138,7 +138,7 @@ function downsample_bdf!(bdf::BiosemiData, dec::Int)
   @info "Downsampling data by factor: $dec"
 
   # padding at start/end
-  nsamp = dec * 20  # enough samples?
+  nsamp = min(dec * 20, size(bdf.data, 1))  # enough samples, bounded by actual length
   ndec = div(nsamp, dec)
 
   data = Matrix{Float32}(undef, div(size(bdf.data, 1), dec), size(bdf.data, 2))

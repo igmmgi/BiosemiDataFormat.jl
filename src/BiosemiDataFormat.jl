@@ -40,7 +40,6 @@ This package is licensed under the MIT License.
 module BiosemiDataFormat
 
 using DSP
-using Logging
 using OrderedCollections
 
 # Include organized module files
@@ -50,6 +49,9 @@ include("channels.jl")
 include("io.jl")
 
 export
+  BiosemiData,
+  BiosemiHeader,
+  BiosemiTriggers,
   crop_bdf!,
   crop_bdf,
   delete_channels_bdf!,

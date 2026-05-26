@@ -214,21 +214,7 @@ idx = channel_index(["A1", "A2", "A3"], [-1])  # Returns [3, 3]
 - Returns indices in the order specified
 - Useful for channel selection and deletion operations
 """
-function channel_index(labels, channels::Array{String})
-  channels = [findfirst(x .== labels) for x in channels]
-  any(channels .=== nothing) && error("Requested channel label is not in the bdf file!")
-  return sort(unique(append!(channels, length(labels))))
-end
 
-function channel_index(labels, channels::Array{Int})
-  trigSelected = findall(x -> x == -1, channels)
-  if length(trigSelected) > 0
-    channels[trigSelected] = repeat([length(labels)], length(trigSelected))
-  end
-  any(channels .> length(labels)) && error("Requested channel number greater than number of channels in file!")
-  any(channels .< 1) && error("Requested channel number less than 1!")
-  return sort(unique(append!(channels, length(labels))))
-end
 
 # Handle SubString types and other AbstractString types
 function channel_index(labels::Vector{<:AbstractString}, channels::Array{String})
@@ -260,8 +246,6 @@ function channel_index(labels::Vector{<:AbstractString}, channels::Array{Int})
 end
 
 # Convenience methods for single inputs
-channel_index(labels, channels::String) = channel_index(labels, [channels])
-channel_index(labels, channels::Int) = channel_index(labels, [channels])
 channel_index(labels::Vector{<:AbstractString}, channels::String) = channel_index(labels, [channels])
 channel_index(labels::Vector{<:AbstractString}, channels::Int) = channel_index(labels, [channels])
 

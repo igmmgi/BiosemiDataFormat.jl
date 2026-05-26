@@ -60,7 +60,7 @@ dat = read_bdf("data.bdf", channels=[1, "Fp1", -1])
 - `crop_bdf`: Reduce data length
 - `select_channels_bdf`: Select channels after reading
 """
-function read_bdf(filename::String; header_only::Bool=false, channels=[])
+function read_bdf(filename::AbstractString; header_only::Bool=false, channels=[])
 
   @info "Reading file: $filename"
   if !isfile(filename)
@@ -127,29 +127,6 @@ Write BioSemi BDF data structure to a BDF file.
 
 # Arguments
 - `bdf_in::BiosemiData`: Data structure to write
-- `filename::String=""`: Output filename. If empty, uses `bdf_in.filename`
-
-# File Format
-Writes data in BioSemi BDF 24-bit format with:
-- 256-byte header containing metadata
-- 24-bit data samples for each channel
-- Status channel as the last channel
-- Proper scaling and calibration information
-
-# Header Information
-The header includes:
-- File identification and metadata
-- Channel information (labels, units, ranges)
-- Sampling rate and data record information
-- Pre-filtering and transducer information
-
-# Examples
-```julia
-# Write to specified filename
-write_bdf(dat, "output.bdf")
-
-# Arguments
-- `bdf_in::BiosemiData`: Data structure to write
 - `filename::String=""`: Output filename (uses original filename if empty)
 
 # Returns
@@ -170,7 +147,7 @@ write_bdf(dat_cropped, "cropped_data.bdf")
 ```
 
 # Notes
-- Creates a new BDF file in standard BioSemi format
+- Creates a new BDF file in standard BioSemi 24-bit format
 - Automatically applies scale factors and converts to 24-bit format
 - Preserves all header information and metadata
 - If no filename is provided, uses the filename stored in the data structure
@@ -181,7 +158,7 @@ write_bdf(dat_cropped, "cropped_data.bdf")
 - `crop_bdf`: Reduce data before writing
 - `select_channels_bdf`: Select channels before writing
 """
-function write_bdf(bdf_in::BiosemiData, filename::String="")
+function write_bdf(bdf_in::BiosemiData, filename::AbstractString="")
 
   if isempty(filename)
     filename = bdf_in.filename
