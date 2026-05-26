@@ -214,9 +214,6 @@ idx = channel_index(["A1", "A2", "A3"], [-1])  # Returns [3, 3]
 - Returns indices in the order specified
 - Useful for channel selection and deletion operations
 """
-
-
-# Handle SubString types and other AbstractString types
 function channel_index(labels::Vector{<:AbstractString}, channels::Array{String})
   channel_idx = Int[]
   for chan in channels
